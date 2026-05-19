@@ -1,0 +1,37 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - kanvix_redis:/data
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      KANVIX_ADDR: ":8080"
+      KANVIX_DB_PATH: "/data/kanvix.db"
+      KANVIX_REDIS_ADDR: "redis:6379"
+      KANVIX_CACHE_TTL: "30s"
+      KANVIX_SESSION_TTL: "168h"
+      KANVIX_COOKIE_SECURE: "false"
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+    volumes:
+      - kanvix_sqlite:/data
+
+  frontend:
+    build:
+      context: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  kanvix_sqlite:
+  kanvix_redis:

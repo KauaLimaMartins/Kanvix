@@ -1,0 +1,14 @@
+node_modules
+dist
+.output
+.vinxi
+.vite
+.turbo
+.cache
+.wrangler
+.lovable
+.git
+.DS_Store
+npm-debug.log
+yarn-error.log
+
