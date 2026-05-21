@@ -52,3 +52,34 @@ func (r Repo) UpdateSubtaskDone(ctx context.Context, id string, done bool, updat
 	}
 	return r.GetSubtaskByID(ctx, id)
 }
+
+func (r Repo) UpdateSubtask(ctx context.Context, id string, title *string, done *bool, updatedAt time.Time) (models.Subtask, error) {
+	updates := map[string]any{
+		"updated_at": updatedAt,
+	}
+	if title != nil {
+		updates["title"] = *title
+	}
+	if done != nil {
+		updates["done"] = *done
+	}
+	res := r.DB.WithContext(ctx).Model(&models.Subtask{}).Where("id = ?", id).Updates(updates)
+	if res.Error != nil {
+		return models.Subtask{}, fmt.Errorf("update subtask: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return models.Subtask{}, repositories.ErrNotFound
+	}
+	return r.GetSubtaskByID(ctx, id)
+}
+
+func (r Repo) DeleteSubtask(ctx context.Context, id string) error {
+	res := r.DB.WithContext(ctx).Delete(&models.Subtask{}, "id = ?", id)
+	if res.Error != nil {
+		return fmt.Errorf("delete subtask: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return repositories.ErrNotFound
+	}
+	return nil
+}

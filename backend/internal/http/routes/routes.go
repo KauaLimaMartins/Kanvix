@@ -77,7 +77,8 @@ func NewRouter(d Deps) *gin.Engine {
 		protected.POST("/tasks/:taskId/move", tasks.Move)
 		protected.GET("/tasks/:taskId/subtasks", subtasks.ListByTask)
 		protected.POST("/tasks/:taskId/subtasks", subtasks.Create)
-		protected.PATCH("/subtasks/:subtaskId", subtasks.SetDone)
+		protected.PATCH("/subtasks/:subtaskId", subtasks.Patch)
+		protected.DELETE("/subtasks/:subtaskId", subtasks.Delete)
 
 		protected.GET("/workspaces/:workspaceId/labels", labels.ListByWorkspace)
 		protected.POST("/workspaces/:workspaceId/labels", labels.Create)

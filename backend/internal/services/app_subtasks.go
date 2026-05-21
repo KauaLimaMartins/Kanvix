@@ -76,6 +76,10 @@ func (s AppService) CreateSubtask(ctx context.Context, ownerID, taskID, title st
 }
 
 func (s AppService) SetSubtaskDone(ctx context.Context, ownerID, subtaskID string, done bool) (dto.Subtask, error) {
+	return s.UpdateSubtask(ctx, ownerID, subtaskID, nil, &done)
+}
+
+func (s AppService) UpdateSubtask(ctx context.Context, ownerID, subtaskID string, title *string, done *bool) (dto.Subtask, error) {
 	st, err := s.Repo.GetSubtaskByID(ctx, subtaskID)
 	if err != nil {
 		return dto.Subtask{}, err
@@ -92,7 +96,7 @@ func (s AppService) SetSubtaskDone(ctx context.Context, ownerID, subtaskID strin
 		return dto.Subtask{}, err
 	}
 
-	updated, err := s.Repo.UpdateSubtaskDone(ctx, subtaskID, done, time.Now().UTC())
+	updated, err := s.Repo.UpdateSubtask(ctx, subtaskID, title, done, time.Now().UTC())
 	if err != nil {
 		return dto.Subtask{}, err
 	}
@@ -103,4 +107,24 @@ func (s AppService) SetSubtaskDone(ctx context.Context, ownerID, subtaskID strin
 		Done:      updated.Done,
 		CreatedAt: updated.CreatedAt.UTC().Format(time.RFC3339Nano),
 	}, nil
+}
+
+func (s AppService) DeleteSubtask(ctx context.Context, ownerID, subtaskID string) error {
+	st, err := s.Repo.GetSubtaskByID(ctx, subtaskID)
+	if err != nil {
+		return err
+	}
+	t, err := s.Repo.GetTaskByID(ctx, st.TaskID)
+	if err != nil {
+		return err
+	}
+	p, err := s.Repo.GetProjectByID(ctx, t.ProjectID)
+	if err != nil {
+		return err
+	}
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
+		return err
+	}
+
+	return s.Repo.DeleteSubtask(ctx, subtaskID)
 }

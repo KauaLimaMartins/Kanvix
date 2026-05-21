@@ -25,8 +25,7 @@ export class ApiError extends Error {
 }
 
 const API_BASE = ((import.meta as unknown as { env?: Record<string, string> }).env
-  ?.VITE_API_BASE_URL ||
-  "/api") as string;
+  ?.VITE_API_BASE_URL ?? "/api") as string;
 
 function joinUrl(base: string, path: string) {
   if (!base) return path;
@@ -78,7 +77,8 @@ export const api = {
         method: "POST",
         json: { email, password: password ?? "" },
       }),
-    me: () => request<{ user: User & { email?: string; role?: string } }>("/auth/me", { method: "GET" }),
+    me: () =>
+      request<{ user: User & { email?: string; role?: string } }>("/auth/me", { method: "GET" }),
     logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
   },
 
@@ -146,9 +146,16 @@ export const api = {
     listByTask: (taskId: string) =>
       request<{ subtasks: Subtask[] }>(`/tasks/${taskId}/subtasks`, { method: "GET" }),
     create: (taskId: string, title: string) =>
-      request<{ subtask: Subtask }>(`/tasks/${taskId}/subtasks`, { method: "POST", json: { title } }),
+      request<{ subtask: Subtask }>(`/tasks/${taskId}/subtasks`, {
+        method: "POST",
+        json: { title },
+      }),
+    update: (subtaskId: string, patch: Partial<Pick<Subtask, "title" | "done">>) =>
+      request<{ subtask: Subtask }>(`/subtasks/${subtaskId}`, { method: "PATCH", json: patch }),
     setDone: (subtaskId: string, done: boolean) =>
       request<{ subtask: Subtask }>(`/subtasks/${subtaskId}`, { method: "PATCH", json: { done } }),
+    delete: (subtaskId: string) =>
+      request<{ ok: true }>(`/subtasks/${subtaskId}`, { method: "DELETE" }),
   },
 
   labels: {
@@ -194,11 +201,17 @@ export const api = {
       request<{
         users: Array<User & { email: string; role: string }>;
       }>(`/workspaces/${workspaceId}/users`, { method: "GET" }),
-    createInWorkspace: (workspaceId: string, u: { email: string; name: string; password: string; role: string }) =>
-      request<{ user: User & { email: string; role: string } }>(`/workspaces/${workspaceId}/users`, {
-        method: "POST",
-        json: u,
-      }),
+    createInWorkspace: (
+      workspaceId: string,
+      u: { email: string; name: string; password: string; role: string },
+    ) =>
+      request<{ user: User & { email: string; role: string } }>(
+        `/workspaces/${workspaceId}/users`,
+        {
+          method: "POST",
+          json: u,
+        },
+      ),
     updateRoleInWorkspace: (workspaceId: string, userId: string, role: string) =>
       request<{ ok: true }>(`/workspaces/${workspaceId}/users/${userId}`, {
         method: "PATCH",

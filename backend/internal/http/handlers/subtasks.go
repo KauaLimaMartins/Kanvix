@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,8 +17,9 @@ type createSubtaskRequest struct {
 	Title string `json:"title" binding:"required,min=1"`
 }
 
-type setSubtaskDoneRequest struct {
-	Done *bool `json:"done"`
+type patchSubtaskRequest struct {
+	Title *string `json:"title"`
+	Done  *bool   `json:"done"`
 }
 
 func (h SubtasksHandler) ListByTask(c *gin.Context) {
@@ -53,21 +55,42 @@ func (h SubtasksHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"subtask": st})
 }
 
-func (h SubtasksHandler) SetDone(c *gin.Context) {
+func (h SubtasksHandler) Patch(c *gin.Context) {
 	userID, ok := requireUserID(c)
 	if !ok {
 		return
 	}
 	subtaskID := c.Param("subtaskId")
-	var req setSubtaskDoneRequest
-	if err := c.ShouldBindJSON(&req); err != nil || req.Done == nil {
+	var req patchSubtaskRequest
+	if err := c.ShouldBindJSON(&req); err != nil || (req.Done == nil && req.Title == nil) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
-	st, err := h.Service.SetSubtaskDone(c.Request.Context(), userID, subtaskID, *req.Done)
+	if req.Title != nil {
+		t := strings.TrimSpace(*req.Title)
+		if t == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+			return
+		}
+		req.Title = &t
+	}
+	st, err := h.Service.UpdateSubtask(c.Request.Context(), userID, subtaskID, req.Title, req.Done)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"subtask": st})
+}
+
+func (h SubtasksHandler) Delete(c *gin.Context) {
+	userID, ok := requireUserID(c)
+	if !ok {
+		return
+	}
+	subtaskID := c.Param("subtaskId")
+	if err := h.Service.DeleteSubtask(c.Request.Context(), userID, subtaskID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

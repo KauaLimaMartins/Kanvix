@@ -55,6 +55,8 @@ interface AppState {
   fetchSubtasks: (taskId: ID) => Promise<void>;
   addSubtask: (taskId: ID, title: string) => Promise<Subtask>;
   setSubtaskDone: (subtaskId: ID, done: boolean) => Promise<void>;
+  updateSubtaskTitle: (subtaskId: ID, title: string) => Promise<void>;
+  deleteSubtask: (subtaskId: ID) => Promise<void>;
   // labels
   addLabel: (workspaceId: ID, name: string, color: string) => Promise<Label>;
   updateLabel: (id: ID, patch: Partial<Label>) => Promise<void>;
@@ -389,13 +391,46 @@ export const useAppStore = create<AppState>()((set, get) => ({
 
   setSubtaskDone: async (subtaskId, done) => {
     const before = get().subtasks;
-    set((s) => ({ subtasks: s.subtasks.map((st) => (st.id === subtaskId ? { ...st, done } : st)) }));
+    set((s) => ({
+      subtasks: s.subtasks.map((st) => (st.id === subtaskId ? { ...st, done } : st)),
+    }));
     try {
       const res = await api.subtasks.setDone(subtaskId, done);
-      set((s) => ({ subtasks: s.subtasks.map((st) => (st.id === subtaskId ? res.subtask : st)) }));
+      set((s) => ({
+        subtasks: s.subtasks.map((st) => (st.id === subtaskId ? res.subtask : st)),
+      }));
     } catch (e) {
       set({ subtasks: before });
       toast.error(errorMessage(e, "Could not update subtask"));
+      throw e;
+    }
+  },
+
+  updateSubtaskTitle: async (subtaskId, title) => {
+    const before = get().subtasks;
+    set((s) => ({
+      subtasks: s.subtasks.map((st) => (st.id === subtaskId ? { ...st, title } : st)),
+    }));
+    try {
+      const res = await api.subtasks.update(subtaskId, { title });
+      set((s) => ({
+        subtasks: s.subtasks.map((st) => (st.id === subtaskId ? res.subtask : st)),
+      }));
+    } catch (e) {
+      set({ subtasks: before });
+      toast.error(errorMessage(e, "Could not update subtask"));
+      throw e;
+    }
+  },
+
+  deleteSubtask: async (subtaskId) => {
+    const before = get().subtasks;
+    set((s) => ({ subtasks: s.subtasks.filter((st) => st.id !== subtaskId) }));
+    try {
+      await api.subtasks.delete(subtaskId);
+    } catch (e) {
+      set({ subtasks: before });
+      toast.error(errorMessage(e, "Could not delete subtask"));
       throw e;
     }
   },
