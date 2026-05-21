@@ -47,6 +47,7 @@ function UsersPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
+  const [lastCreatedUserId, setLastCreatedUserId] = useState<string | null>(null);
 
   if (!workspace) {
     return (
@@ -129,12 +130,14 @@ function UsersPage() {
                 onClick={() => {
                   if (!email.trim() || !name.trim() || !password) return;
                   void (async () => {
-                    await api.users.createInWorkspace(workspaceId, {
+                    const res = await api.users.createInWorkspace(workspaceId, {
                       email: email.trim(),
                       name: name.trim(),
                       password,
                       role,
                     });
+                    setLastCreatedUserId(res.user.id);
+                    setTimeout(() => setLastCreatedUserId(null), 900);
                     setName("");
                     setEmail("");
                     setPassword("");
@@ -163,7 +166,12 @@ function UsersPage() {
         ) : (
           <div className="divide-y divide-border">
             {usersQuery.data!.users.map((u) => (
-              <div key={u.id} className="flex items-center justify-between px-4 py-3">
+              <div
+                key={u.id}
+                className={`flex items-center justify-between px-4 py-3 ${
+                  u.id === lastCreatedUserId ? "kanvix-ring" : ""
+                }`}
+              >
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{u.name}</div>
                   <div className="truncate text-xs text-muted-foreground">{u.email}</div>
@@ -194,4 +202,3 @@ function UsersPage() {
     </div>
   );
 }
-

@@ -29,6 +29,7 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
   const deleteTask = useAppStore((s) => s.deleteTask);
   const moveTask = useAppStore((s) => s.moveTask);
   const allSubtasks = useAppStore((s) => s.subtasks);
+  const lastCreatedSubtaskId = useAppStore((s) => s.lastCreatedSubtaskId);
   const subtasks = useMemo(
     () => (taskId ? allSubtasks.filter((st) => st.taskId === taskId) : []),
     [allSubtasks, taskId],
@@ -203,7 +204,9 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
               {subtasks.map((st) => (
                 <div
                   key={st.id}
-                  className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2 py-1.5"
+                  className={`flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2 py-1.5 ${
+                    st.id === lastCreatedSubtaskId ? "kanvix-ring" : ""
+                  }`}
                 >
                   <Checkbox
                     checked={st.done}

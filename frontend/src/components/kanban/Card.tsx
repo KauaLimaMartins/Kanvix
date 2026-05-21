@@ -11,6 +11,7 @@ export function Card({ task, onOpen }: { task: Task; onOpen: () => void }) {
   });
   const allLabels = useAppStore((s) => s.labels);
   const users = useAppStore((s) => s.users);
+  const lastCreatedTaskId = useAppStore((s) => s.lastCreatedTaskId);
   const labels = (Array.isArray(task.labels) ? task.labels : [])
     .map((id) => allLabels.find((l) => l.id === id))
     .filter((l): l is NonNullable<typeof l> => Boolean(l));
@@ -34,7 +35,9 @@ export function Card({ task, onOpen }: { task: Task; onOpen: () => void }) {
       {...attributes}
       {...listeners}
       onClick={onOpen}
-      className="group cursor-grab rounded-lg border border-border bg-card p-3 text-card-foreground shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md active:cursor-grabbing"
+      className={`group cursor-grab rounded-lg border border-border bg-card p-3 text-card-foreground shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-md active:cursor-grabbing ${
+        task.id === lastCreatedTaskId ? "kanvix-ring" : ""
+      }`}
     >
       <div className="text-sm font-medium leading-snug">{task.title}</div>
       {labels.length > 0 && (

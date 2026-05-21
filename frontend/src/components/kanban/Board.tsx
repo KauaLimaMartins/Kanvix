@@ -12,8 +12,10 @@ import {
 import { Column } from "./Column";
 import { Card } from "./Card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
+import { motion } from "framer-motion";
 
 export function Board({
   projectId,
@@ -33,6 +35,8 @@ export function Board({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [isAddingColumn, setIsAddingColumn] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
 
   const tasksByColumn = useMemo(() => {
     const map: Record<string, typeof tasks> = {};
@@ -76,6 +80,14 @@ export function Board({
     void moveTask(activeIdStr, toCol, toIndex);
   };
 
+  const submitNewColumn = () => {
+    const name = newColumnName.trim();
+    if (!name) return;
+    void addColumn(projectId, name);
+    setIsAddingColumn(false);
+    setNewColumnName("");
+  };
+
   return (
     <DndContext
       sensors={sensors}
@@ -84,23 +96,61 @@ export function Board({
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
     >
-      <div className="flex h-full gap-3 overflow-x-auto overflow-y-hidden p-4">
+      <motion.div
+        className="flex h-full gap-3 overflow-x-auto overflow-y-hidden p-4"
+        initial={{ opacity: 0, scale: 0.99 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.22, ease: [0.2, 0, 0, 1] }}
+      >
         {columns.map((c) => (
           <Column key={c.id} column={c} tasks={tasksByColumn[c.id] ?? []} onOpenTask={onOpenTask} />
         ))}
         <div className="shrink-0">
-          <Button
-            variant="ghost"
-            className="h-9 w-72 justify-start gap-1.5 border border-dashed border-border bg-muted/20 text-muted-foreground hover:bg-muted/40"
-            onClick={() => {
-              const name = prompt("Column name", "New column");
-              if (name?.trim()) void addColumn(projectId, name.trim());
-            }}
-          >
-            <Plus className="h-4 w-4" /> Add column
-          </Button>
+          {isAddingColumn ? (
+            <div className="w-72 rounded-md border border-border bg-muted/20 p-2">
+              <Input
+                value={newColumnName}
+                onChange={(e) => setNewColumnName(e.target.value)}
+                placeholder="Column name"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitNewColumn();
+                  if (e.key === "Escape") {
+                    setIsAddingColumn(false);
+                    setNewColumnName("");
+                  }
+                }}
+              />
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" onClick={submitNewColumn}>
+                  Create
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsAddingColumn(false);
+                    setNewColumnName("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              className="h-9 w-72 justify-start gap-1.5 border border-dashed border-border bg-muted/20 text-muted-foreground transition-all hover:-translate-y-0.5 hover:bg-muted/40 active:translate-y-0"
+              onClick={() => {
+                setIsAddingColumn(true);
+                setNewColumnName("New column");
+              }}
+            >
+              <Plus className="h-4 w-4" /> Add column
+            </Button>
+          )}
         </div>
-      </div>
+      </motion.div>
       <DragOverlay>{activeTask && <Card task={activeTask} onOpen={() => {}} />}</DragOverlay>
     </DndContext>
   );

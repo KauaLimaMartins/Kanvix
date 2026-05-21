@@ -18,6 +18,9 @@ interface AppState {
   subtasks: Subtask[];
   labels: Label[];
   users: User[];
+  lastCreatedColumnId: string | null;
+  lastCreatedTaskId: string | null;
+  lastCreatedSubtaskId: string | null;
   theme: "dark" | "light";
   authStatus: "unknown" | "guest" | "authed";
   userEmail: string | null;
@@ -68,6 +71,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   subtasks: [],
   labels: [],
   users: [],
+  lastCreatedColumnId: null,
+  lastCreatedTaskId: null,
+  lastCreatedSubtaskId: null,
   theme: "dark",
   authStatus: "unknown",
   userEmail: null,
@@ -288,7 +294,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   addColumn: async (projectId, name) => {
     try {
       const res = await api.columns.create(projectId, name);
-      set((s) => ({ columns: [...s.columns, res.column] }));
+      const id = res.column.id;
+      set((s) => ({ columns: [...s.columns, res.column], lastCreatedColumnId: id }));
+      setTimeout(() => {
+        if (get().lastCreatedColumnId === id) set({ lastCreatedColumnId: null });
+      }, 900);
       return res.column;
     } catch (e) {
       toast.error(errorMessage(e, "Could not create column"));
@@ -320,7 +330,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   addTask: async (projectId, columnId, title) => {
     try {
       const res = await api.tasks.create(projectId, columnId, title);
-      set((s) => ({ tasks: [...s.tasks, res.task] }));
+      const id = res.task.id;
+      set((s) => ({ tasks: [...s.tasks, res.task], lastCreatedTaskId: id }));
+      setTimeout(() => {
+        if (get().lastCreatedTaskId === id) set({ lastCreatedTaskId: null });
+      }, 900);
       return res.task;
     } catch (e) {
       toast.error(errorMessage(e, "Could not create task"));
@@ -361,7 +375,11 @@ export const useAppStore = create<AppState>()((set, get) => ({
   addSubtask: async (taskId, title) => {
     try {
       const res = await api.subtasks.create(taskId, title);
-      set((s) => ({ subtasks: [...s.subtasks, res.subtask] }));
+      const id = res.subtask.id;
+      set((s) => ({ subtasks: [...s.subtasks, res.subtask], lastCreatedSubtaskId: id }));
+      setTimeout(() => {
+        if (get().lastCreatedSubtaskId === id) set({ lastCreatedSubtaskId: null });
+      }, 900);
       return res.subtask;
     } catch (e) {
       toast.error(errorMessage(e, "Could not create subtask"));

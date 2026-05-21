@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { useAppStore } from "@/store/useAppStore";
 import { useDroppable } from "@dnd-kit/core";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 export function Column({
   column,
@@ -27,6 +28,7 @@ export function Column({
   const addTask = useAppStore((s) => s.addTask);
   const renameColumn = useAppStore((s) => s.renameColumn);
   const deleteColumn = useAppStore((s) => s.deleteColumn);
+  const lastCreatedColumnId = useAppStore((s) => s.lastCreatedColumnId);
   const { setNodeRef, isOver } = useDroppable({
     id: `col-${column.id}`,
     data: { type: "column", columnId: column.id },
@@ -40,7 +42,11 @@ export function Column({
   const ids = tasks.map((t) => t.id);
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-lg bg-muted/40">
+    <div
+      className={`flex w-72 shrink-0 flex-col rounded-lg bg-muted/40 ${
+        column.id === lastCreatedColumnId ? "kanvix-ring" : ""
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         {editingName ? (
           <Input
@@ -108,60 +114,74 @@ export function Column({
           ))}
         </SortableContext>
 
-        {adding ? (
-          <div className="space-y-2 rounded-md border border-border bg-card p-2">
-            <Input
-              autoFocus
-              placeholder="Task title"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && newTitle.trim()) {
-                  void addTask(column.projectId, column.id, newTitle.trim());
-                  setNewTitle("");
-                }
-                if (e.key === "Escape") {
-                  setAdding(false);
-                  setNewTitle("");
-                }
-              }}
-              className="h-8"
-            />
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                className="h-7"
-                onClick={() => {
-                  if (newTitle.trim()) {
-                    void addTask(column.projectId, column.id, newTitle.trim());
-                    setNewTitle("");
-                  }
-                  setAdding(false);
-                }}
-              >
-                Add
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-7"
-                onClick={() => {
-                  setAdding(false);
-                  setNewTitle("");
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/50"
-          >
-            <Plus className="h-3.5 w-3.5" /> Add task
-          </button>
-        )}
+        <AnimatePresence initial={false} mode="wait">
+          {adding ? (
+            <motion.div
+              key="add-task-form"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.18, ease: [0.2, 0, 0, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-2 rounded-md border border-border bg-card p-2">
+                <Input
+                  autoFocus
+                  placeholder="Task title"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newTitle.trim()) {
+                      void addTask(column.projectId, column.id, newTitle.trim());
+                      setNewTitle("");
+                    }
+                    if (e.key === "Escape") {
+                      setAdding(false);
+                      setNewTitle("");
+                    }
+                  }}
+                  className="h-8"
+                />
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    className="h-7"
+                    onClick={() => {
+                      if (newTitle.trim()) {
+                        void addTask(column.projectId, column.id, newTitle.trim());
+                        setNewTitle("");
+                      }
+                      setAdding(false);
+                    }}
+                  >
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7"
+                    onClick={() => {
+                      setAdding(false);
+                      setNewTitle("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.button
+              key="add-task-button"
+              type="button"
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-all duration-150 hover:-translate-y-0.5 hover:bg-accent/60 hover:text-foreground active:translate-y-0"
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add task
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
