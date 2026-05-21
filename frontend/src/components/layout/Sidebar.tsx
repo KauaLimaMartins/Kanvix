@@ -16,6 +16,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
   ChevronsUpDown,
@@ -257,24 +268,44 @@ export function Sidebar() {
                 <FolderKanban className="h-4 w-4 shrink-0 opacity-60" />
                 <span className="truncate">{p.name}</span>
               </Link>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-                onClick={() => {
-                  if (confirm(`Delete project "${p.name}"?`)) {
-                    void deleteProject(p.id);
-                    if (active && currentWorkspaceId) {
-                      router.navigate({
-                        to: "/w/$workspaceId",
-                        params: { workspaceId: currentWorkspaceId },
-                      });
-                    }
-                  }
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete project?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Delete project “{p.name}”? This action cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction asChild>
+                      <Button
+                        variant="destructive"
+                        onClick={() => {
+                          void deleteProject(p.id);
+                          if (active && currentWorkspaceId) {
+                            router.navigate({
+                              to: "/w/$workspaceId",
+                              params: { workspaceId: currentWorkspaceId },
+                            });
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </motion.div>
           );
         })}

@@ -9,6 +9,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -214,7 +225,9 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
                       void setSubtaskDone(st.id, v === true).catch(() => {});
                     }}
                   />
-                  <div className={st.done ? "text-sm text-muted-foreground line-through" : "text-sm"}>
+                  <div
+                    className={st.done ? "text-sm text-muted-foreground line-through" : "text-sm"}
+                  >
                     {st.title}
                   </div>
                 </div>
@@ -228,19 +241,37 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
           </div>
 
           <div className="flex justify-between pt-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-destructive hover:text-destructive"
-              onClick={() => {
-                if (confirm("Delete this task?")) {
-                  deleteTask(task.id);
-                  onClose();
-                }
-              }}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete task?</AlertDialogTitle>
+                  <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction asChild>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        deleteTask(task.id);
+                        onClose();
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button
               size="sm"
               onClick={() => {

@@ -5,6 +5,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { MoreHorizontal, Plus, Trash2 } from "lucide-react";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 
@@ -38,6 +48,7 @@ export function Column({
   const [newTitle, setNewTitle] = useState("");
   const [editingName, setEditingName] = useState(false);
   const [name, setName] = useState(column.name);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const ids = tasks.map((t) => t.id);
 
@@ -91,9 +102,7 @@ export function Column({
             <DropdownMenuItem
               className="text-destructive"
               onClick={() => {
-                if (confirm(`Delete column "${column.name}" and its tasks?`)) {
-                  void deleteColumn(column.id);
-                }
+                setDeleteOpen(true);
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" /> Delete column
@@ -183,6 +192,32 @@ export function Column({
           )}
         </AnimatePresence>
       </div>
+
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete column?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete column “{column.name}” and its {tasks.length} task
+              {tasks.length === 1 ? "" : "s"}?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  void deleteColumn(column.id);
+                  setDeleteOpen(false);
+                }}
+              >
+                Delete
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

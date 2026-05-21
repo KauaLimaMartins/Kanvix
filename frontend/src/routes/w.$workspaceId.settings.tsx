@@ -3,6 +3,17 @@ import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useState, useMemo } from "react";
 import {
   LayoutGrid,
@@ -174,18 +185,35 @@ function SettingsPage() {
         <p className="mt-1 text-xs text-muted-foreground">
           Deleting a workspace removes all its projects, columns, tasks, and labels.
         </p>
-        <Button
-          variant="destructive"
-          className="mt-3"
-          onClick={() => {
-            if (confirm(`Delete workspace "${ws.name}"? This cannot be undone.`)) {
-              void deleteWorkspace(workspaceId);
-              router.navigate({ to: "/workspaces" });
-            }
-          }}
-        >
-          Delete workspace
-        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="mt-3">
+              Delete workspace
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete workspace?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Delete workspace “{ws.name}”? This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    void deleteWorkspace(workspaceId);
+                    router.navigate({ to: "/workspaces" });
+                  }}
+                >
+                  Delete
+                </Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
