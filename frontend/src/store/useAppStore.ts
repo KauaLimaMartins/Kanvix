@@ -1,5 +1,5 @@
 import { ApiError, api } from "@/services/api";
-import type { Column, ID, Label, Project, Task, User, Workspace } from "@/types";
+import type { Column, ID, Label, Project, Subtask, Task, User, Workspace } from "@/types";
 
 import { create } from "zustand";
 import { toast } from "sonner";
@@ -15,16 +15,20 @@ interface AppState {
   projects: Project[];
   columns: Column[];
   tasks: Task[];
+  subtasks: Subtask[];
   labels: Label[];
   users: User[];
   theme: "dark" | "light";
   authStatus: "unknown" | "guest" | "authed";
   userEmail: string | null;
+  userRole: "admin" | "member" | null;
+  needsFirstSignup: boolean | null;
   isLoading: boolean;
   error: string | null;
   hydrate: () => Promise<void>;
   // auth
   login: (email: string, password?: string) => Promise<void>;
+  firstSignup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   // workspaces
   addWorkspace: (name: string) => Promise<Workspace>;
@@ -44,14 +48,16 @@ interface AppState {
   updateTask: (id: ID, patch: Partial<Task>) => Promise<void>;
   deleteTask: (id: ID) => Promise<void>;
   moveTask: (taskId: ID, toColumnId: ID, toIndex: number) => Promise<void>;
+  // subtasks
+  fetchSubtasks: (taskId: ID) => Promise<void>;
+  addSubtask: (taskId: ID, title: string) => Promise<Subtask>;
+  setSubtaskDone: (subtaskId: ID, done: boolean) => Promise<void>;
   // labels
   addLabel: (workspaceId: ID, name: string, color: string) => Promise<Label>;
   updateLabel: (id: ID, patch: Partial<Label>) => Promise<void>;
   deleteLabel: (id: ID) => Promise<void>;
   // theme
   setTheme: (t: "dark" | "light") => void;
-  // misc
-  resetAll: () => Promise<void>;
 }
 
 export const useAppStore = create<AppState>()((set, get) => ({
@@ -59,11 +65,14 @@ export const useAppStore = create<AppState>()((set, get) => ({
   projects: [],
   columns: [],
   tasks: [],
+  subtasks: [],
   labels: [],
   users: [],
   theme: "dark",
   authStatus: "unknown",
   userEmail: null,
+  userRole: null,
+  needsFirstSignup: null,
   isLoading: false,
   error: null,
 
@@ -74,23 +83,36 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set({
         authStatus: "authed",
         userEmail: data.user.email ?? null,
+        userRole: (data.user.role as "admin" | "member" | undefined) ?? null,
+        needsFirstSignup: false,
         workspaces: data.workspaces,
         projects: data.projects,
         columns: data.columns,
-        tasks: data.tasks,
+        tasks: data.tasks.map((t) => ({ ...t, labels: Array.isArray(t.labels) ? t.labels : [] })),
+        subtasks: [],
         labels: data.labels,
         users: data.users,
         isLoading: false,
       });
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
+        let needsFirstSignup: boolean | null = null;
+        try {
+          const res = await api.auth.setup();
+          needsFirstSignup = res.needsFirstSignup;
+        } catch {
+          needsFirstSignup = null;
+        }
         set({
           authStatus: "guest",
           userEmail: null,
+          userRole: null,
+          needsFirstSignup,
           workspaces: [],
           projects: [],
           columns: [],
           tasks: [],
+          subtasks: [],
           labels: [],
           users: [],
           isLoading: false,
@@ -112,16 +134,46 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set({
         authStatus: "authed",
         userEmail: data.user.email ?? email,
+        userRole: (data.user.role as "admin" | "member" | undefined) ?? null,
+        needsFirstSignup: false,
         workspaces: data.workspaces,
         projects: data.projects,
         columns: data.columns,
-        tasks: data.tasks,
+        tasks: data.tasks.map((t) => ({ ...t, labels: Array.isArray(t.labels) ? t.labels : [] })),
+        subtasks: [],
         labels: data.labels,
         users: data.users,
         isLoading: false,
       });
     } catch (e) {
       const msg = errorMessage(e, "Login failed");
+      set({ isLoading: false, error: msg });
+      toast.error(msg);
+      throw e;
+    }
+  },
+
+  firstSignup: async (name, email, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      await api.auth.firstSignup(email, password, name);
+      const data = await api.bootstrap();
+      set({
+        authStatus: "authed",
+        userEmail: data.user.email ?? email,
+        userRole: (data.user.role as "admin" | "member" | undefined) ?? null,
+        needsFirstSignup: false,
+        workspaces: data.workspaces,
+        projects: data.projects,
+        columns: data.columns,
+        tasks: data.tasks.map((t) => ({ ...t, labels: Array.isArray(t.labels) ? t.labels : [] })),
+        subtasks: [],
+        labels: data.labels,
+        users: data.users,
+        isLoading: false,
+      });
+    } catch (e) {
+      const msg = errorMessage(e, "Signup failed");
       set({ isLoading: false, error: msg });
       toast.error(msg);
       throw e;
@@ -136,10 +188,13 @@ export const useAppStore = create<AppState>()((set, get) => ({
       set({
         authStatus: "guest",
         userEmail: null,
+        userRole: null,
+        needsFirstSignup: null,
         workspaces: [],
         projects: [],
         columns: [],
         tasks: [],
+        subtasks: [],
         labels: [],
         users: [],
         isLoading: false,
@@ -291,6 +346,42 @@ export const useAppStore = create<AppState>()((set, get) => ({
     }
   },
 
+  fetchSubtasks: async (taskId) => {
+    try {
+      const res = await api.subtasks.listByTask(taskId);
+      set((s) => ({
+        subtasks: [...s.subtasks.filter((st) => st.taskId !== taskId), ...res.subtasks],
+      }));
+    } catch (e) {
+      toast.error(errorMessage(e, "Could not load subtasks"));
+      throw e;
+    }
+  },
+
+  addSubtask: async (taskId, title) => {
+    try {
+      const res = await api.subtasks.create(taskId, title);
+      set((s) => ({ subtasks: [...s.subtasks, res.subtask] }));
+      return res.subtask;
+    } catch (e) {
+      toast.error(errorMessage(e, "Could not create subtask"));
+      throw e;
+    }
+  },
+
+  setSubtaskDone: async (subtaskId, done) => {
+    const before = get().subtasks;
+    set((s) => ({ subtasks: s.subtasks.map((st) => (st.id === subtaskId ? { ...st, done } : st)) }));
+    try {
+      const res = await api.subtasks.setDone(subtaskId, done);
+      set((s) => ({ subtasks: s.subtasks.map((st) => (st.id === subtaskId ? res.subtask : st)) }));
+    } catch (e) {
+      set({ subtasks: before });
+      toast.error(errorMessage(e, "Could not update subtask"));
+      throw e;
+    }
+  },
+
   moveTask: async (taskId, toColumnId, toIndex) => {
     const before = get().tasks;
     set((s) => {
@@ -368,15 +459,4 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
 
   setTheme: (theme) => set({ theme }),
-
-  resetAll: async () => {
-    try {
-      await api.admin.reset();
-      await get().hydrate();
-      toast.success("Demo data reset");
-    } catch (e) {
-      toast.error(errorMessage(e, "Could not reset demo data"));
-      throw e;
-    }
-  },
 }));

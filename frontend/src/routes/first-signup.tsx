@@ -1,5 +1,6 @@
-import { createFileRoute, useRouter, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useRouter } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+
 import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,17 +8,14 @@ import { motion } from "framer-motion";
 import { ClientOnly } from "@/components/ClientOnly";
 import { api } from "@/services/api";
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute("/first-signup")({
   head: () => ({
-    meta: [
-      { title: "Sign in — Kanvix" },
-      { name: "description", content: "Sign in to your Kanvix workspace." },
-    ],
+    meta: [{ title: "Create first user — Kanvix" }],
   }),
-  component: LoginPage,
+  component: FirstSignupPage,
 });
 
-function LoginPage() {
+function FirstSignupPage() {
   return (
     <ClientOnly
       fallback={
@@ -26,49 +24,42 @@ function LoginPage() {
         </div>
       }
     >
-      <LoginInner />
+      <FirstSignupInner />
     </ClientOnly>
   );
 }
 
-function LoginInner() {
+function FirstSignupInner() {
   const authStatus = useAppStore((s) => s.authStatus);
-  const login = useAppStore((s) => s.login);
-  const needsFirstSignupFromStore = useAppStore((s) => s.needsFirstSignup);
+  const firstSignup = useAppStore((s) => s.firstSignup);
   const isLoading = useAppStore((s) => s.isLoading);
   const error = useAppStore((s) => s.error);
   const router = useRouter();
+
+  const [checked, setChecked] = useState(false);
+  const [allowed, setAllowed] = useState(false);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [needsFirstSignup, setNeedsFirstSignup] = useState<boolean | null>(needsFirstSignupFromStore);
 
   useEffect(() => {
-    if (authStatus === "authed") return;
-    if (needsFirstSignupFromStore !== null) {
-      setNeedsFirstSignup(needsFirstSignupFromStore);
-      return;
-    }
-    let cancelled = false;
     void (async () => {
       try {
         const res = await api.auth.setup();
-        if (!cancelled) setNeedsFirstSignup(res.needsFirstSignup);
-      } catch {
-        if (!cancelled) setNeedsFirstSignup(false);
+        setAllowed(res.needsFirstSignup);
+      } finally {
+        setChecked(true);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [authStatus, needsFirstSignupFromStore]);
+  }, []);
 
   if (authStatus === "authed") return <Navigate to="/workspaces" />;
-  if (needsFirstSignupFromStore === true || needsFirstSignup === true) return <Navigate to="/first-signup" />;
+  if (checked && !allowed) return <Navigate to="/login" />;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    await login(email.trim(), password);
+    if (!name.trim() || !email.trim() || !password) return;
+    await firstSignup(name.trim(), email.trim(), password);
     router.navigate({ to: "/workspaces" });
   };
 
@@ -91,17 +82,26 @@ function LoginInner() {
           </div>
           <div>
             <div className="text-xl font-semibold tracking-tight">Kanvix</div>
-            <div className="text-xs text-muted-foreground">Boards for builders.</div>
+            <div className="text-xs text-muted-foreground">First-time setup</div>
           </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/5">
-          <h1 className="text-lg font-semibold">Welcome back</h1>
+          <h1 className="text-lg font-semibold">Create first user</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in to continue.
+            This user will become an administrator automatically.
           </p>
 
           <form onSubmit={submit} className="mt-5 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Name</label>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+                disabled={isLoading || !checked || !allowed}
+              />
+            </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Email</label>
               <Input
@@ -109,7 +109,7 @@ function LoginInner() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                disabled={isLoading}
+                disabled={isLoading || !checked || !allowed}
               />
             </div>
             <div className="space-y-1.5">
@@ -118,11 +118,15 @@ function LoginInner() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoading}
+                disabled={isLoading || !checked || !allowed}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isLoading || needsFirstSignup === null}>
-              {isLoading ? "Signing in…" : "Sign in"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || !checked || !allowed}
+            >
+              {isLoading ? "Creating…" : "Create account"}
             </Button>
           </form>
 
@@ -131,12 +135,9 @@ function LoginInner() {
               {error}
             </div>
           )}
-
-          <div className="mt-4 text-center text-[11px] text-muted-foreground">
-            Sign in with your account email and password.
-          </div>
         </div>
       </motion.div>
     </div>
   );
 }
+

@@ -4,13 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/crypto/bcrypt"
 
 	"kanvix/backend/internal/models"
 	"kanvix/backend/internal/repositories"
@@ -25,41 +26,108 @@ type AuthService struct {
 
 type sessionData struct {
 	UserID string `json:"userId"`
-	Email  string `json:"email"`
 }
 
-func (s AuthService) Login(ctx context.Context, email string) (models.User, string, error) {
+func (s AuthService) NeedsFirstSignup(ctx context.Context) (bool, error) {
+	var n int64
+	if err := s.Repo.DB.WithContext(ctx).Model(&models.User{}).Count(&n).Error; err != nil {
+		return false, fmt.Errorf("count users: %w", err)
+	}
+	return n == 0, nil
+}
+
+func (s AuthService) FirstSignup(ctx context.Context, email, password, name string) (models.User, string, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	name = strings.TrimSpace(name)
+	if email == "" {
+		return models.User{}, "", fmt.Errorf("email required")
+	}
+	if name == "" {
+		return models.User{}, "", fmt.Errorf("name required")
+	}
+	if len(password) < 8 {
+		return models.User{}, "", fmt.Errorf("password must be at least 8 characters")
+	}
+
+	need, err := s.NeedsFirstSignup(ctx)
+	if err != nil {
+		return models.User{}, "", err
+	}
+	if !need {
+		return models.User{}, "", repositories.ErrForbidden
+	}
+
+	pwHashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return models.User{}, "", fmt.Errorf("hash password: %w", err)
+	}
+
+	now := time.Now().UTC()
+	u := models.User{
+		ID:           uuid.NewString(),
+		Email:        email,
+		Name:         name,
+		AvatarColor:  "#6366f1",
+		Role:         "admin",
+		PasswordHash: string(pwHashBytes),
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	u, err = s.Repo.CreateUser(ctx, u)
+	if err != nil {
+		return models.User{}, "", err
+	}
+
+	ws := models.Workspace{
+		ID:        uuid.NewString(),
+		OwnerID:   u.ID,
+		Name:      "My Workspace",
+		Icon:      "LayoutGrid",
+		Color:     "#6366f1",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	if _, err := s.Repo.CreateWorkspace(ctx, ws); err != nil {
+		return models.User{}, "", err
+	}
+	m := models.WorkspaceMember{WorkspaceID: ws.ID, UserID: u.ID, Role: "admin", CreatedAt: now}
+	if err := s.Repo.DB.WithContext(ctx).Create(&m).Error; err != nil {
+		return models.User{}, "", fmt.Errorf("create membership: %w", err)
+	}
+
+	token, err := newSessionToken()
+	if err != nil {
+		return models.User{}, "", err
+	}
+	if err := s.Redis.Set(ctx, sessionKey(token), u.ID, s.SessionTTL).Err(); err != nil {
+		return models.User{}, "", fmt.Errorf("store session: %w", err)
+	}
+	return u, token, nil
+}
+
+func (s AuthService) Login(ctx context.Context, email string, password string) (models.User, string, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email == "" {
 		return models.User{}, "", fmt.Errorf("email required")
 	}
 
-	u, err := s.Repo.GetUserByID(ctx, "u1")
+	u, err := s.Repo.GetUserByEmail(ctx, email)
 	if err != nil {
-		if !errors.Is(err, repositories.ErrNotFound) {
-			return models.User{}, "", err
-		}
-		u = models.User{
-			ID:          "u1",
-			Email:       "you@demo.local",
-			Name:        "You",
-			AvatarColor: "#6366f1",
-		}
-		u, err = s.Repo.CreateUser(ctx, u)
-		if err != nil {
-			return models.User{}, "", err
-		}
+		return models.User{}, "", err
 	}
-	u.Email = email
+	if u.PasswordHash == "" {
+		return models.User{}, "", repositories.ErrForbidden
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return models.User{}, "", repositories.ErrForbidden
+	}
 
 	token, err := newSessionToken()
 	if err != nil {
 		return models.User{}, "", err
 	}
 
-	key := sessionKey(token)
-	raw, _ := json.Marshal(sessionData{UserID: u.ID, Email: email})
-	if err := s.Redis.Set(ctx, key, raw, s.SessionTTL).Err(); err != nil {
+	if err := s.Redis.Set(ctx, sessionKey(token), u.ID, s.SessionTTL).Err(); err != nil {
 		return models.User{}, "", fmt.Errorf("store session: %w", err)
 	}
 
@@ -80,23 +148,19 @@ func (s AuthService) Me(ctx context.Context, token string) (models.User, error) 
 	if token == "" {
 		return models.User{}, repositories.ErrForbidden
 	}
-	raw, err := s.Redis.Get(ctx, sessionKey(token)).Bytes()
+	userID, err := s.Redis.Get(ctx, sessionKey(token)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return models.User{}, repositories.ErrForbidden
 		}
 		return models.User{}, fmt.Errorf("get session: %w", err)
 	}
-	var sdata sessionData
-	if err := json.Unmarshal(raw, &sdata); err != nil || sdata.UserID == "" {
+	if userID == "" {
 		return models.User{}, repositories.ErrForbidden
 	}
-	u, err := s.Repo.GetUserByID(ctx, sdata.UserID)
+	u, err := s.Repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return models.User{}, err
-	}
-	if sdata.Email != "" {
-		u.Email = sdata.Email
 	}
 	return u, nil
 }

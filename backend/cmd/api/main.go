@@ -34,8 +34,8 @@ func main() {
 		log.Error("db migrate failed", "error", err)
 		os.Exit(1)
 	}
-	if err := database.EnsureSeeded(ctx, db.Gorm); err != nil {
-		log.Error("db seed failed", "error", err)
+	if err := database.EnsureOwnerMemberships(ctx, db.Gorm); err != nil {
+		log.Error("db memberships failed", "error", err)
 		os.Exit(1)
 	}
 

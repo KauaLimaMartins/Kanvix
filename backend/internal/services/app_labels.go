@@ -8,16 +8,11 @@ import (
 
 	"kanvix/backend/internal/http/dto"
 	"kanvix/backend/internal/models"
-	"kanvix/backend/internal/repositories"
 )
 
 func (s AppService) ListLabels(ctx context.Context, ownerID, workspaceID string) ([]dto.Label, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin", "member"); err != nil {
 		return nil, err
-	}
-	if ws.OwnerID != ownerID {
-		return nil, repositories.ErrForbidden
 	}
 	ls, err := s.Repo.ListLabelsByWorkspace(ctx, workspaceID)
 	if err != nil {
@@ -31,12 +26,8 @@ func (s AppService) ListLabels(ctx context.Context, ownerID, workspaceID string)
 }
 
 func (s AppService) CreateLabel(ctx context.Context, ownerID, workspaceID, name, color string) (dto.Label, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin"); err != nil {
 		return dto.Label{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Label{}, repositories.ErrForbidden
 	}
 	now := time.Now().UTC()
 	l := models.Label{
@@ -59,12 +50,8 @@ func (s AppService) UpdateLabel(ctx context.Context, ownerID, labelID string, pa
 	if err != nil {
 		return dto.Label{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, l.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, l.WorkspaceID, "admin"); err != nil {
 		return dto.Label{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Label{}, repositories.ErrForbidden
 	}
 	patch["updated_at"] = time.Now().UTC()
 	updated, err := s.Repo.UpdateLabel(ctx, labelID, patch)
@@ -79,12 +66,8 @@ func (s AppService) DeleteLabel(ctx context.Context, ownerID, labelID string) er
 	if err != nil {
 		return err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, l.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, l.WorkspaceID, "admin"); err != nil {
 		return err
-	}
-	if ws.OwnerID != ownerID {
-		return repositories.ErrForbidden
 	}
 	return s.Repo.DeleteLabel(ctx, labelID)
 }

@@ -13,9 +13,11 @@ func AutoMigrate(ctx context.Context, db *gorm.DB) error {
 	if err := db.WithContext(ctx).AutoMigrate(
 		&models.User{},
 		&models.Workspace{},
+		&models.WorkspaceMember{},
 		&models.Project{},
 		&models.Column{},
 		&models.Task{},
+		&models.Subtask{},
 		&models.Label{},
 		&models.TaskLabel{},
 	); err != nil {

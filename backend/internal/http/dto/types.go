@@ -6,11 +6,20 @@ type User struct {
 	AvatarColor string `json:"avatarColor"`
 }
 
+type UserDetail struct {
+	ID          string `json:"id"`
+	Email       string `json:"email"`
+	Name        string `json:"name"`
+	AvatarColor string `json:"avatarColor"`
+	Role        string `json:"role"`
+}
+
 type MeUser struct {
 	ID          string `json:"id"`
 	Email       string `json:"email"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatarColor"`
+	Role        string `json:"role"`
 }
 
 type Workspace struct {
@@ -18,6 +27,7 @@ type Workspace struct {
 	Name  string `json:"name"`
 	Icon  string `json:"icon,omitempty"`
 	Color string `json:"color,omitempty"`
+	Role  string `json:"role,omitempty"`
 }
 
 type Project struct {
@@ -45,6 +55,14 @@ type Task struct {
 	AssigneeID  *string  `json:"assigneeId,omitempty"`
 	Order       int      `json:"order"`
 	CreatedAt   string   `json:"createdAt"`
+}
+
+type Subtask struct {
+	ID        string `json:"id"`
+	TaskID    string `json:"taskId"`
+	Title     string `json:"title"`
+	Done      bool   `json:"done"`
+	CreatedAt string `json:"createdAt"`
 }
 
 type Label struct {

@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WorkspacesRouteImport } from './routes/workspaces'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FirstSignupRouteImport } from './routes/first-signup'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WWorkspaceIdRouteRouteImport } from './routes/w.$workspaceId.route'
 import { Route as WWorkspaceIdIndexRouteImport } from './routes/w.$workspaceId.index'
+import { Route as WWorkspaceIdUsersRouteImport } from './routes/w.$workspaceId.users'
 import { Route as WWorkspaceIdSettingsRouteImport } from './routes/w.$workspaceId.settings'
 import { Route as WWorkspaceIdLabelsRouteImport } from './routes/w.$workspaceId.labels'
 import { Route as WWorkspaceIdPProjectIdRouteImport } from './routes/w.$workspaceId.p.$projectId'
@@ -26,6 +28,11 @@ const WorkspacesRoute = WorkspacesRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FirstSignupRoute = FirstSignupRouteImport.update({
+  id: '/first-signup',
+  path: '/first-signup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -41,6 +48,11 @@ const WWorkspaceIdRouteRoute = WWorkspaceIdRouteRouteImport.update({
 const WWorkspaceIdIndexRoute = WWorkspaceIdIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WWorkspaceIdRouteRoute,
+} as any)
+const WWorkspaceIdUsersRoute = WWorkspaceIdUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
   getParentRoute: () => WWorkspaceIdRouteRoute,
 } as any)
 const WWorkspaceIdSettingsRoute = WWorkspaceIdSettingsRouteImport.update({
@@ -61,31 +73,37 @@ const WWorkspaceIdPProjectIdRoute = WWorkspaceIdPProjectIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/first-signup': typeof FirstSignupRoute
   '/login': typeof LoginRoute
   '/workspaces': typeof WorkspacesRoute
   '/w/$workspaceId': typeof WWorkspaceIdRouteRouteWithChildren
   '/w/$workspaceId/labels': typeof WWorkspaceIdLabelsRoute
   '/w/$workspaceId/settings': typeof WWorkspaceIdSettingsRoute
+  '/w/$workspaceId/users': typeof WWorkspaceIdUsersRoute
   '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/first-signup': typeof FirstSignupRoute
   '/login': typeof LoginRoute
   '/workspaces': typeof WorkspacesRoute
   '/w/$workspaceId/labels': typeof WWorkspaceIdLabelsRoute
   '/w/$workspaceId/settings': typeof WWorkspaceIdSettingsRoute
+  '/w/$workspaceId/users': typeof WWorkspaceIdUsersRoute
   '/w/$workspaceId': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/first-signup': typeof FirstSignupRoute
   '/login': typeof LoginRoute
   '/workspaces': typeof WorkspacesRoute
   '/w/$workspaceId': typeof WWorkspaceIdRouteRouteWithChildren
   '/w/$workspaceId/labels': typeof WWorkspaceIdLabelsRoute
   '/w/$workspaceId/settings': typeof WWorkspaceIdSettingsRoute
+  '/w/$workspaceId/users': typeof WWorkspaceIdUsersRoute
   '/w/$workspaceId/': typeof WWorkspaceIdIndexRoute
   '/w/$workspaceId/p/$projectId': typeof WWorkspaceIdPProjectIdRoute
 }
@@ -93,36 +111,43 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/first-signup'
     | '/login'
     | '/workspaces'
     | '/w/$workspaceId'
     | '/w/$workspaceId/labels'
     | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/users'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/first-signup'
     | '/login'
     | '/workspaces'
     | '/w/$workspaceId/labels'
     | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/users'
     | '/w/$workspaceId'
     | '/w/$workspaceId/p/$projectId'
   id:
     | '__root__'
     | '/'
+    | '/first-signup'
     | '/login'
     | '/workspaces'
     | '/w/$workspaceId'
     | '/w/$workspaceId/labels'
     | '/w/$workspaceId/settings'
+    | '/w/$workspaceId/users'
     | '/w/$workspaceId/'
     | '/w/$workspaceId/p/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FirstSignupRoute: typeof FirstSignupRoute
   LoginRoute: typeof LoginRoute
   WorkspacesRoute: typeof WorkspacesRoute
   WWorkspaceIdRouteRoute: typeof WWorkspaceIdRouteRouteWithChildren
@@ -144,6 +169,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/first-signup': {
+      id: '/first-signup'
+      path: '/first-signup'
+      fullPath: '/first-signup'
+      preLoaderRoute: typeof FirstSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -163,6 +195,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/w/$workspaceId/'
       preLoaderRoute: typeof WWorkspaceIdIndexRouteImport
+      parentRoute: typeof WWorkspaceIdRouteRoute
+    }
+    '/w/$workspaceId/users': {
+      id: '/w/$workspaceId/users'
+      path: '/users'
+      fullPath: '/w/$workspaceId/users'
+      preLoaderRoute: typeof WWorkspaceIdUsersRouteImport
       parentRoute: typeof WWorkspaceIdRouteRoute
     }
     '/w/$workspaceId/settings': {
@@ -192,6 +231,7 @@ declare module '@tanstack/react-router' {
 interface WWorkspaceIdRouteRouteChildren {
   WWorkspaceIdLabelsRoute: typeof WWorkspaceIdLabelsRoute
   WWorkspaceIdSettingsRoute: typeof WWorkspaceIdSettingsRoute
+  WWorkspaceIdUsersRoute: typeof WWorkspaceIdUsersRoute
   WWorkspaceIdIndexRoute: typeof WWorkspaceIdIndexRoute
   WWorkspaceIdPProjectIdRoute: typeof WWorkspaceIdPProjectIdRoute
 }
@@ -199,6 +239,7 @@ interface WWorkspaceIdRouteRouteChildren {
 const WWorkspaceIdRouteRouteChildren: WWorkspaceIdRouteRouteChildren = {
   WWorkspaceIdLabelsRoute: WWorkspaceIdLabelsRoute,
   WWorkspaceIdSettingsRoute: WWorkspaceIdSettingsRoute,
+  WWorkspaceIdUsersRoute: WWorkspaceIdUsersRoute,
   WWorkspaceIdIndexRoute: WWorkspaceIdIndexRoute,
   WWorkspaceIdPProjectIdRoute: WWorkspaceIdPProjectIdRoute,
 }
@@ -208,6 +249,7 @@ const WWorkspaceIdRouteRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FirstSignupRoute: FirstSignupRoute,
   LoginRoute: LoginRoute,
   WorkspacesRoute: WorkspacesRoute,
   WWorkspaceIdRouteRoute: WWorkspaceIdRouteRouteWithChildren,

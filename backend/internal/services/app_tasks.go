@@ -10,7 +10,6 @@ import (
 
 	"kanvix/backend/internal/http/dto"
 	"kanvix/backend/internal/models"
-	"kanvix/backend/internal/repositories"
 )
 
 func (s AppService) ListTasks(ctx context.Context, ownerID, projectID string) ([]dto.Task, error) {
@@ -18,12 +17,8 @@ func (s AppService) ListTasks(ctx context.Context, ownerID, projectID string) ([
 	if err != nil {
 		return nil, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return nil, err
-	}
-	if ws.OwnerID != ownerID {
-		return nil, repositories.ErrForbidden
 	}
 
 	tasks, err := s.Repo.ListTasksByProject(ctx, projectID)
@@ -48,13 +43,17 @@ func (s AppService) ListTasks(ctx context.Context, ownerID, projectID string) ([
 
 	out := make([]dto.Task, 0, len(tasks))
 	for _, t := range tasks {
+		lbls := taskToLabels[t.ID]
+		if lbls == nil {
+			lbls = []string{}
+		}
 		out = append(out, dto.Task{
 			ID:          t.ID,
 			ProjectID:   t.ProjectID,
 			ColumnID:    t.ColumnID,
 			Title:       t.Title,
 			Description: t.Description,
-			Labels:      taskToLabels[t.ID],
+			Labels:      lbls,
 			DueDate:     t.DueDate,
 			AssigneeID:  t.AssigneeID,
 			Order:       t.Order,
@@ -73,12 +72,8 @@ func (s AppService) GetTask(ctx context.Context, ownerID, taskID string) (dto.Ta
 	if err != nil {
 		return dto.Task{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return dto.Task{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Task{}, repositories.ErrForbidden
 	}
 	var joins []models.TaskLabel
 	if err := s.Repo.DB.WithContext(ctx).Find(&joins, "task_id = ?", t.ID).Error; err != nil {
@@ -107,12 +102,8 @@ func (s AppService) CreateTask(ctx context.Context, ownerID, projectID, columnID
 	if err != nil {
 		return dto.Task{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return dto.Task{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Task{}, repositories.ErrForbidden
 	}
 
 	n, err := s.Repo.CountTasksInColumn(ctx, columnID)
@@ -158,12 +149,8 @@ func (s AppService) UpdateTask(ctx context.Context, ownerID, taskID string, patc
 	if err != nil {
 		return dto.Task{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return dto.Task{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Task{}, repositories.ErrForbidden
 	}
 
 	patch["updated_at"] = time.Now().UTC()
@@ -190,12 +177,8 @@ func (s AppService) DeleteTask(ctx context.Context, ownerID, taskID string) erro
 	if err != nil {
 		return err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return err
-	}
-	if ws.OwnerID != ownerID {
-		return repositories.ErrForbidden
 	}
 	return s.Repo.DeleteTask(ctx, taskID)
 }
@@ -209,12 +192,8 @@ func (s AppService) MoveTask(ctx context.Context, ownerID, taskID, toColumnID st
 	if err != nil {
 		return err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return err
-	}
-	if ws.OwnerID != ownerID {
-		return repositories.ErrForbidden
 	}
 
 	fromColumnID := t.ColumnID

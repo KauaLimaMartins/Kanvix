@@ -3,12 +3,14 @@ package models
 import "time"
 
 type User struct {
-	ID          string    `gorm:"primaryKey;type:text" json:"id"`
-	Email       string    `gorm:"uniqueIndex;not null" json:"email"`
-	Name        string    `gorm:"not null" json:"name"`
-	AvatarColor string    `gorm:"not null" json:"avatarColor"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID           string    `gorm:"primaryKey;type:text" json:"id"`
+	Email        string    `gorm:"uniqueIndex;not null" json:"email"`
+	Name         string    `gorm:"not null" json:"name"`
+	AvatarColor  string    `gorm:"not null" json:"avatarColor"`
+	Role         string    `gorm:"not null;default:'member'" json:"role"`
+	PasswordHash string    `gorm:"not null;default:''" json:"-"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type Workspace struct {
@@ -20,6 +22,15 @@ type Workspace struct {
 	Color     string    `gorm:"not null" json:"color"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+type WorkspaceMember struct {
+	WorkspaceID string    `gorm:"primaryKey;type:text" json:"workspaceId"`
+	UserID      string    `gorm:"primaryKey;type:text" json:"userId"`
+	Workspace   Workspace `gorm:"foreignKey:WorkspaceID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
+	User        User      `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
+	Role        string    `gorm:"not null;default:'member'" json:"role"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 type Project struct {
@@ -56,6 +67,16 @@ type Task struct {
 	Order       int       `gorm:"index;not null" json:"order"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+type Subtask struct {
+	ID        string    `gorm:"primaryKey;type:text" json:"id"`
+	TaskID    string    `gorm:"index;not null" json:"taskId"`
+	Task      Task      `gorm:"foreignKey:TaskID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"-"`
+	Title     string    `gorm:"not null" json:"title"`
+	Done      bool      `gorm:"not null;default:false" json:"done"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 type Label struct {

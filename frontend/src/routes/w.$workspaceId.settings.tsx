@@ -57,6 +57,7 @@ function SettingsPage() {
   const { workspaceId } = Route.useParams();
   const router = useRouter();
   const workspaces = useAppStore((s) => s.workspaces);
+  const userRole = useAppStore((s) => s.userRole);
   const updateWorkspace = useAppStore((s) => s.updateWorkspace);
   const deleteWorkspace = useAppStore((s) => s.deleteWorkspace);
   const ws = useMemo(() => workspaces.find((w) => w.id === workspaceId), [workspaces, workspaceId]);
@@ -68,6 +69,11 @@ function SettingsPage() {
 
   if (!ws) {
     return <div className="p-8 text-sm text-muted-foreground">Workspace not found.</div>;
+  }
+
+  const canEdit = (ws.role ?? userRole) === "admin";
+  if (!canEdit) {
+    return <div className="p-8 text-sm text-muted-foreground">Forbidden.</div>;
   }
 
   const PreviewIcon = ICONS[icon] ?? LayoutGrid;

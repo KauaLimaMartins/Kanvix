@@ -49,3 +49,14 @@ func (r Repo) CreateUser(ctx context.Context, u models.User) (models.User, error
 	}
 	return u, nil
 }
+
+func (r Repo) UpdateUser(ctx context.Context, id string, patch map[string]any) (models.User, error) {
+	res := r.DB.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Updates(patch)
+	if res.Error != nil {
+		return models.User{}, fmt.Errorf("update user: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return models.User{}, repositories.ErrNotFound
+	}
+	return r.GetUserByID(ctx, id)
+}

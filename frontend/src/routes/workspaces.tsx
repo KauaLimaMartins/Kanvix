@@ -54,6 +54,7 @@ function WorkspacesInner() {
   const addWorkspace = useAppStore((s) => s.addWorkspace);
   const logout = useAppStore((s) => s.logout);
   const userEmail = useAppStore((s) => s.userEmail);
+  const userRole = useAppStore((s) => s.userRole);
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
@@ -134,48 +135,50 @@ function WorkspacesInner() {
             );
           })}
 
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <motion.button
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: workspaces.length * 0.05 }}
-                whileHover={{ y: -3 }}
-                whileTap={{ scale: 0.98 }}
-                className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground transition-colors hover:bg-muted/40"
-              >
-                <Plus className="mb-2 h-5 w-5" />
-                New workspace
-              </motion.button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New workspace</DialogTitle>
-              </DialogHeader>
-              <Input
-                autoFocus
-                placeholder="Workspace name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={async () => {
-                    if (!name.trim()) return;
-                    const w = await addWorkspace(name.trim());
-                    setName("");
-                    setOpen(false);
-                    router.navigate({ to: "/w/$workspaceId", params: { workspaceId: w.id } });
-                  }}
+          {userRole === "admin" && (
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <motion.button
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: workspaces.length * 0.05 }}
+                  whileHover={{ y: -3 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex h-full min-h-[160px] flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/20 p-5 text-sm text-muted-foreground transition-colors hover:bg-muted/40"
                 >
-                  Create
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                  <Plus className="mb-2 h-5 w-5" />
+                  New workspace
+                </motion.button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New workspace</DialogTitle>
+                </DialogHeader>
+                <Input
+                  autoFocus
+                  placeholder="Workspace name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      if (!name.trim()) return;
+                      const w = await addWorkspace(name.trim());
+                      setName("");
+                      setOpen(false);
+                      router.navigate({ to: "/w/$workspaceId", params: { workspaceId: w.id } });
+                    }}
+                  >
+                    Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </main>
     </div>

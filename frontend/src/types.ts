@@ -4,6 +4,8 @@ export interface User {
   id: ID;
   name: string;
   avatarColor: string;
+  email?: string;
+  role?: "admin" | "member";
 }
 
 export interface Workspace {
@@ -11,6 +13,7 @@ export interface Workspace {
   name: string;
   icon?: string; // lucide icon name
   color?: string; // hex color
+  role?: "admin" | "member";
 }
 
 export interface Project {
@@ -37,6 +40,14 @@ export interface Task {
   dueDate?: string;
   assigneeId?: ID;
   order: number;
+  createdAt: string;
+}
+
+export interface Subtask {
+  id: ID;
+  taskId: ID;
+  title: string;
+  done: boolean;
   createdAt: string;
 }
 

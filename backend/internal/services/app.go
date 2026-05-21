@@ -30,13 +30,22 @@ type AppService struct {
 
 func (s AppService) Bootstrap(ctx context.Context, owner models.User) (Bootstrap, error) {
 	ownerID := owner.ID
-	var workspaces []models.Workspace
-	if err := s.Repo.DB.WithContext(ctx).Find(&workspaces, "owner_id = ?", ownerID).Error; err != nil {
-		return Bootstrap{}, fmt.Errorf("list workspaces: %w", err)
+	var memberships []models.WorkspaceMember
+	if err := s.Repo.DB.WithContext(ctx).Find(&memberships, "user_id = ?", ownerID).Error; err != nil {
+		return Bootstrap{}, fmt.Errorf("list memberships: %w", err)
 	}
-	wsIDs := make([]string, 0, len(workspaces))
-	for _, w := range workspaces {
-		wsIDs = append(wsIDs, w.ID)
+	roleByWS := map[string]string{}
+	wsIDs := make([]string, 0, len(memberships))
+	for _, m := range memberships {
+		wsIDs = append(wsIDs, m.WorkspaceID)
+		roleByWS[m.WorkspaceID] = m.Role
+	}
+
+	var workspaces []models.Workspace
+	if len(wsIDs) > 0 {
+		if err := s.Repo.DB.WithContext(ctx).Order("created_at asc").Find(&workspaces, "id IN ?", wsIDs).Error; err != nil {
+			return Bootstrap{}, fmt.Errorf("list workspaces: %w", err)
+		}
 	}
 
 	var projects []models.Project
@@ -83,12 +92,19 @@ func (s AppService) Bootstrap(ctx context.Context, owner models.User) (Bootstrap
 	}
 
 	var users []models.User
-	if err := s.Repo.DB.WithContext(ctx).Order("name asc").Find(&users).Error; err != nil {
-		return Bootstrap{}, fmt.Errorf("list users: %w", err)
+	if len(wsIDs) > 0 {
+		if err := s.Repo.DB.WithContext(ctx).
+			Distinct("users.*").
+			Joins("JOIN workspace_members wm ON wm.user_id = users.id").
+			Where("wm.workspace_id IN ?", wsIDs).
+			Order("users.name asc").
+			Find(&users).Error; err != nil {
+			return Bootstrap{}, fmt.Errorf("list users: %w", err)
+		}
 	}
 
 	out := Bootstrap{
-		User:       dto.MeUser{ID: owner.ID, Email: owner.Email, Name: owner.Name, AvatarColor: owner.AvatarColor},
+		User:       dto.MeUser{ID: owner.ID, Email: owner.Email, Name: owner.Name, AvatarColor: owner.AvatarColor, Role: owner.Role},
 		Workspaces: make([]dto.Workspace, 0, len(workspaces)),
 		Projects:   make([]dto.Project, 0, len(projects)),
 		Columns:    make([]dto.Column, 0, len(columns)),
@@ -102,7 +118,7 @@ func (s AppService) Bootstrap(ctx context.Context, owner models.User) (Bootstrap
 	}
 
 	for _, w := range workspaces {
-		out.Workspaces = append(out.Workspaces, dto.Workspace{ID: w.ID, Name: w.Name, Icon: w.Icon, Color: w.Color})
+		out.Workspaces = append(out.Workspaces, dto.Workspace{ID: w.ID, Name: w.Name, Icon: w.Icon, Color: w.Color, Role: roleByWS[w.ID]})
 	}
 	for _, p := range projects {
 		out.Projects = append(out.Projects, dto.Project{ID: p.ID, WorkspaceID: p.WorkspaceID, Name: p.Name, Description: p.Description})
@@ -114,13 +130,17 @@ func (s AppService) Bootstrap(ctx context.Context, owner models.User) (Bootstrap
 		out.Labels = append(out.Labels, dto.Label{ID: l.ID, WorkspaceID: l.WorkspaceID, Name: l.Name, Color: l.Color})
 	}
 	for _, t := range tasks {
+		lbls := taskToLabels[t.ID]
+		if lbls == nil {
+			lbls = []string{}
+		}
 		out.Tasks = append(out.Tasks, dto.Task{
 			ID:          t.ID,
 			ProjectID:   t.ProjectID,
 			ColumnID:    t.ColumnID,
 			Title:       t.Title,
 			Description: t.Description,
-			Labels:      taskToLabels[t.ID],
+			Labels:      lbls,
 			DueDate:     t.DueDate,
 			AssigneeID:  t.AssigneeID,
 			Order:       t.Order,

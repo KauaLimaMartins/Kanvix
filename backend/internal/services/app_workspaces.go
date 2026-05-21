@@ -12,7 +12,7 @@ import (
 )
 
 func (s AppService) ListWorkspaces(ctx context.Context, ownerID string) ([]dto.Workspace, error) {
-	ws, err := s.Repo.ListWorkspacesByOwner(ctx, ownerID)
+	ws, err := s.Repo.ListWorkspacesForUser(ctx, ownerID)
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +24,9 @@ func (s AppService) ListWorkspaces(ctx context.Context, ownerID string) ([]dto.W
 }
 
 func (s AppService) CreateWorkspace(ctx context.Context, ownerID string, name string, icon *string, color *string) (dto.Workspace, error) {
+	if err := s.requireGlobalAdmin(ctx, ownerID); err != nil {
+		return dto.Workspace{}, err
+	}
 	now := time.Now().UTC()
 	w := models.Workspace{
 		ID:        uuid.NewString(),
@@ -44,16 +47,20 @@ func (s AppService) CreateWorkspace(ctx context.Context, ownerID string, name st
 	if err != nil {
 		return dto.Workspace{}, err
 	}
+	if err := s.Repo.UpsertWorkspaceMember(ctx, models.WorkspaceMember{
+		WorkspaceID: created.ID,
+		UserID:      ownerID,
+		Role:        "admin",
+		CreatedAt:   now,
+	}); err != nil {
+		return dto.Workspace{}, err
+	}
 	return dto.Workspace{ID: created.ID, Name: created.Name, Icon: created.Icon, Color: created.Color}, nil
 }
 
 func (s AppService) UpdateWorkspace(ctx context.Context, ownerID, workspaceID string, patch map[string]any) (dto.Workspace, error) {
-	w, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin"); err != nil {
 		return dto.Workspace{}, err
-	}
-	if w.OwnerID != ownerID {
-		return dto.Workspace{}, repositories.ErrForbidden
 	}
 	patch["updated_at"] = time.Now().UTC()
 	updated, err := s.Repo.UpdateWorkspace(ctx, workspaceID, patch)
@@ -70,6 +77,9 @@ func (s AppService) DeleteWorkspace(ctx context.Context, ownerID, workspaceID st
 	}
 	if w.OwnerID != ownerID {
 		return repositories.ErrForbidden
+	}
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin"); err != nil {
+		return err
 	}
 	return s.Repo.DeleteWorkspace(ctx, workspaceID)
 }

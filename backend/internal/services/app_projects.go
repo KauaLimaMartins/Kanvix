@@ -8,16 +8,11 @@ import (
 
 	"kanvix/backend/internal/http/dto"
 	"kanvix/backend/internal/models"
-	"kanvix/backend/internal/repositories"
 )
 
 func (s AppService) ListProjects(ctx context.Context, ownerID, workspaceID string) ([]dto.Project, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin", "member"); err != nil {
 		return nil, err
-	}
-	if ws.OwnerID != ownerID {
-		return nil, repositories.ErrForbidden
 	}
 	ps, err := s.Repo.ListProjectsByWorkspace(ctx, workspaceID)
 	if err != nil {
@@ -31,12 +26,8 @@ func (s AppService) ListProjects(ctx context.Context, ownerID, workspaceID strin
 }
 
 func (s AppService) CreateProject(ctx context.Context, ownerID, workspaceID, name string, description *string) (dto.Project, []dto.Column, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin"); err != nil {
 		return dto.Project{}, nil, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Project{}, nil, repositories.ErrForbidden
 	}
 
 	now := time.Now().UTC()
@@ -82,12 +73,8 @@ func (s AppService) UpdateProject(ctx context.Context, ownerID, projectID string
 	if err != nil {
 		return dto.Project{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin"); err != nil {
 		return dto.Project{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Project{}, repositories.ErrForbidden
 	}
 	patch["updated_at"] = time.Now().UTC()
 	updated, err := s.Repo.UpdateProject(ctx, projectID, patch)
@@ -102,12 +89,8 @@ func (s AppService) DeleteProject(ctx context.Context, ownerID, projectID string
 	if err != nil {
 		return err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin"); err != nil {
 		return err
-	}
-	if ws.OwnerID != ownerID {
-		return repositories.ErrForbidden
 	}
 	return s.Repo.DeleteProject(ctx, projectID)
 }

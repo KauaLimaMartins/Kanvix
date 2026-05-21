@@ -11,7 +11,7 @@ export function Card({ task, onOpen }: { task: Task; onOpen: () => void }) {
   });
   const allLabels = useAppStore((s) => s.labels);
   const users = useAppStore((s) => s.users);
-  const labels = task.labels
+  const labels = (Array.isArray(task.labels) ? task.labels : [])
     .map((id) => allLabels.find((l) => l.id === id))
     .filter((l): l is NonNullable<typeof l> => Boolean(l));
 
@@ -24,6 +24,8 @@ export function Card({ task, onOpen }: { task: Task; onOpen: () => void }) {
       : undefined,
   };
   const assignee = task.assigneeId ? users.find((u) => u.id === task.assigneeId) : null;
+  const due = task.dueDate ? new Date(task.dueDate) : null;
+  const hasValidDue = due != null && !Number.isNaN(due.getTime());
 
   return (
     <div
@@ -51,10 +53,10 @@ export function Card({ task, onOpen }: { task: Task; onOpen: () => void }) {
       )}
       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
         <span className="flex items-center gap-1">
-          {task.dueDate && (
+          {hasValidDue && (
             <>
               <Calendar className="h-3 w-3" />
-              {new Date(task.dueDate).toLocaleDateString(undefined, {
+              {due!.toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",
               })}

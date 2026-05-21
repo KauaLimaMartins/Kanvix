@@ -8,7 +8,6 @@ import (
 
 	"kanvix/backend/internal/http/dto"
 	"kanvix/backend/internal/models"
-	"kanvix/backend/internal/repositories"
 )
 
 func (s AppService) ListColumns(ctx context.Context, ownerID, projectID string) ([]dto.Column, error) {
@@ -16,12 +15,8 @@ func (s AppService) ListColumns(ctx context.Context, ownerID, projectID string) 
 	if err != nil {
 		return nil, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin", "member"); err != nil {
 		return nil, err
-	}
-	if ws.OwnerID != ownerID {
-		return nil, repositories.ErrForbidden
 	}
 	cols, err := s.Repo.ListColumnsByProject(ctx, projectID)
 	if err != nil {
@@ -39,12 +34,8 @@ func (s AppService) CreateColumn(ctx context.Context, ownerID, projectID, name s
 	if err != nil {
 		return dto.Column{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin"); err != nil {
 		return dto.Column{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Column{}, repositories.ErrForbidden
 	}
 	n, err := s.Repo.CountColumnsInProject(ctx, projectID)
 	if err != nil {
@@ -75,12 +66,8 @@ func (s AppService) UpdateColumn(ctx context.Context, ownerID, columnID string, 
 	if err != nil {
 		return dto.Column{}, err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin"); err != nil {
 		return dto.Column{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.Column{}, repositories.ErrForbidden
 	}
 	patch["updated_at"] = time.Now().UTC()
 	updated, err := s.Repo.UpdateColumn(ctx, columnID, patch)
@@ -99,12 +86,8 @@ func (s AppService) DeleteColumn(ctx context.Context, ownerID, columnID string) 
 	if err != nil {
 		return err
 	}
-	ws, err := s.Repo.GetWorkspaceByID(ctx, p.WorkspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, p.WorkspaceID, "admin"); err != nil {
 		return err
-	}
-	if ws.OwnerID != ownerID {
-		return repositories.ErrForbidden
 	}
 	return s.Repo.DeleteColumn(ctx, columnID)
 }

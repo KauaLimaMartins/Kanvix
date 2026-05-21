@@ -24,6 +24,7 @@ export const Route = createFileRoute("/w/$workspaceId/")({
 function WorkspacePage() {
   const { workspaceId } = Route.useParams();
   const workspace = useAppStore((s) => s.workspaces.find((w) => w.id === workspaceId));
+  const userRole = useAppStore((s) => s.userRole);
   const allProjects = useAppStore((s) => s.projects);
   const tasks = useAppStore((s) => s.tasks);
   const projects = allProjects.filter((p) => p.workspaceId === workspaceId);
@@ -48,6 +49,8 @@ function WorkspacePage() {
     );
   }
 
+  const canCreateProjects = (workspace.role ?? userRole) === "admin";
+
   return (
     <div className="p-8">
       <div className="mb-6 flex items-end justify-between">
@@ -63,7 +66,7 @@ function WorkspacePage() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button disabled={!canCreateProjects}>
               <Plus className="mr-2 h-4 w-4" /> New project
             </Button>
           </DialogTrigger>
@@ -83,6 +86,7 @@ function WorkspacePage() {
               </Button>
               <Button
                 onClick={() => {
+                  if (!canCreateProjects) return;
                   if (!name.trim()) return;
                   void (async () => {
                     const p = await addProject(workspaceId, name.trim());

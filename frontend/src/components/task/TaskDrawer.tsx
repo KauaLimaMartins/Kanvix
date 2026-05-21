@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Trash2, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LabelPicker } from "@/components/labels/LabelPicker";
@@ -27,9 +28,18 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
   const updateTask = useAppStore((s) => s.updateTask);
   const deleteTask = useAppStore((s) => s.deleteTask);
   const moveTask = useAppStore((s) => s.moveTask);
+  const allSubtasks = useAppStore((s) => s.subtasks);
+  const subtasks = useMemo(
+    () => (taskId ? allSubtasks.filter((st) => st.taskId === taskId) : []),
+    [allSubtasks, taskId],
+  );
+  const fetchSubtasks = useAppStore((s) => s.fetchSubtasks);
+  const addSubtask = useAppStore((s) => s.addSubtask);
+  const setSubtaskDone = useAppStore((s) => s.setSubtaskDone);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
   useEffect(() => {
     if (task) {
@@ -38,13 +48,18 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
     }
   }, [task?.id]);
 
+  useEffect(() => {
+    if (!taskId) return;
+    void fetchSubtasks(taskId).catch(() => {});
+  }, [fetchSubtasks, taskId]);
+
   if (!task || !project) return null;
 
   const taskColumns = columns
     .filter((c) => c.projectId === task.projectId)
     .sort((a, b) => a.order - b.order);
 
-  const taskLabelObjs = task.labels
+  const taskLabelObjs = (Array.isArray(task.labels) ? task.labels : [])
     .map((id) => allLabels.find((l) => l.id === id))
     .filter((l): l is NonNullable<typeof l> => Boolean(l));
 
@@ -159,6 +174,48 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
                 selectedIds={task.labels}
                 onChange={(ids) => updateTask(task.id, { labels: ids })}
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs">Subtasks</Label>
+            <form
+              className="flex gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const v = newSubtaskTitle.trim();
+                if (!v) return;
+                void addSubtask(task.id, v)
+                  .then(() => setNewSubtaskTitle(""))
+                  .catch(() => {});
+              }}
+            >
+              <Input
+                placeholder="Add a subtask"
+                value={newSubtaskTitle}
+                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+              />
+              <Button type="submit" variant="secondary">
+                Add
+              </Button>
+            </form>
+            <div className="space-y-2">
+              {subtasks.map((st) => (
+                <div
+                  key={st.id}
+                  className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2 py-1.5"
+                >
+                  <Checkbox
+                    checked={st.done}
+                    onCheckedChange={(v) => {
+                      void setSubtaskDone(st.id, v === true).catch(() => {});
+                    }}
+                  />
+                  <div className={st.done ? "text-sm text-muted-foreground line-through" : "text-sm"}>
+                    {st.title}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

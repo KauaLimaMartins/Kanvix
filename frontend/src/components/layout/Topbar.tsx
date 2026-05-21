@@ -1,13 +1,12 @@
 import { useAppStore } from "@/store/useAppStore";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, RotateCcw, LogOut } from "lucide-react";
+import { Moon, Sun, LogOut } from "lucide-react";
 import { useRouter } from "@tanstack/react-router";
 import { WorkspaceSearch } from "@/components/search/WorkspaceSearch";
 
 export function Topbar() {
   const theme = useAppStore((s) => s.theme);
   const setTheme = useAppStore((s) => s.setTheme);
-  const resetAll = useAppStore((s) => s.resetAll);
   const logout = useAppStore((s) => s.logout);
   const userEmail = useAppStore((s) => s.userEmail);
   const router = useRouter();
@@ -18,16 +17,6 @@ export function Topbar() {
         <span className="mr-auto text-xs text-muted-foreground">Signed in as {userEmail}</span>
       )}
       <WorkspaceSearch />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={async () => {
-          if (confirm("Reset all data to seed?")) await resetAll();
-        }}
-      >
-        <RotateCcw className="mr-2 h-4 w-4" />
-        Reset demo
-      </Button>
       <Button
         variant="ghost"
         size="icon"

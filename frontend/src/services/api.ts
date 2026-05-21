@@ -1,7 +1,7 @@
-import type { Column, Label, Project, Task, User, Workspace } from "@/types";
+import type { Column, Label, Project, Subtask, Task, User, Workspace } from "@/types";
 
 export type BootstrapResponse = {
-  user: User & { email: string };
+  user: User & { email: string; role: string };
   workspaces: Workspace[];
   projects: Project[];
   columns: Column[];
@@ -67,12 +67,18 @@ async function request<T>(path: string, init: RequestInit & { json?: Json } = {}
 
 export const api = {
   auth: {
+    setup: () => request<{ needsFirstSignup: boolean }>("/auth/setup", { method: "GET" }),
+    firstSignup: (email: string, password: string, name: string) =>
+      request<{ user: User & { email?: string; role?: string } }>("/auth/first-signup", {
+        method: "POST",
+        json: { email, password, name },
+      }),
     login: (email: string, password?: string) =>
-      request<{ user: User & { email?: string } }>("/auth/login", {
+      request<{ user: User & { email?: string; role?: string } }>("/auth/login", {
         method: "POST",
         json: { email, password: password ?? "" },
       }),
-    me: () => request<{ user: User & { email?: string } }>("/auth/me", { method: "GET" }),
+    me: () => request<{ user: User & { email?: string; role?: string } }>("/auth/me", { method: "GET" }),
     logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
   },
 
@@ -136,6 +142,15 @@ export const api = {
       }),
   },
 
+  subtasks: {
+    listByTask: (taskId: string) =>
+      request<{ subtasks: Subtask[] }>(`/tasks/${taskId}/subtasks`, { method: "GET" }),
+    create: (taskId: string, title: string) =>
+      request<{ subtask: Subtask }>(`/tasks/${taskId}/subtasks`, { method: "POST", json: { title } }),
+    setDone: (subtaskId: string, done: boolean) =>
+      request<{ subtask: Subtask }>(`/subtasks/${subtaskId}`, { method: "PATCH", json: { done } }),
+  },
+
   labels: {
     listByWorkspace: (workspaceId: string) =>
       request<{ labels: Label[] }>(`/workspaces/${workspaceId}/labels`, { method: "GET" }),
@@ -174,7 +189,20 @@ export const api = {
     },
   },
 
-  admin: {
-    reset: () => request<{ ok: true }>("/admin/reset", { method: "POST" }),
+  users: {
+    listByWorkspace: (workspaceId: string) =>
+      request<{
+        users: Array<User & { email: string; role: string }>;
+      }>(`/workspaces/${workspaceId}/users`, { method: "GET" }),
+    createInWorkspace: (workspaceId: string, u: { email: string; name: string; password: string; role: string }) =>
+      request<{ user: User & { email: string; role: string } }>(`/workspaces/${workspaceId}/users`, {
+        method: "POST",
+        json: u,
+      }),
+    updateRoleInWorkspace: (workspaceId: string, userId: string, role: string) =>
+      request<{ ok: true }>(`/workspaces/${workspaceId}/users/${userId}`, {
+        method: "PATCH",
+        json: { role },
+      }),
   },
 };

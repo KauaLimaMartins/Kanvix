@@ -25,6 +25,7 @@ import {
   Tag,
   LayoutDashboard,
   Settings,
+  Users,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -32,6 +33,7 @@ import { motion } from "framer-motion";
 export function Sidebar() {
   const workspaces = useAppStore((s) => s.workspaces);
   const projects = useAppStore((s) => s.projects);
+  const userRole = useAppStore((s) => s.userRole);
   const addWorkspace = useAppStore((s) => s.addWorkspace);
   const addProject = useAppStore((s) => s.addProject);
   const deleteProject = useAppStore((s) => s.deleteProject);
@@ -49,6 +51,8 @@ export function Sidebar() {
   const pathname = router.state.location.pathname;
   const isLabelsRoute = pathname.endsWith("/labels");
   const isSettingsRoute = pathname.endsWith("/settings");
+  const isUsersRoute = pathname.endsWith("/users");
+  const canManageUsers = (currentWorkspace?.role ?? userRole) === "admin";
 
   const workspaceProjects = projects.filter((p) => p.workspaceId === currentWorkspaceId);
 
@@ -111,14 +115,16 @@ export function Sidebar() {
             <DropdownMenuItem onClick={() => router.navigate({ to: "/workspaces" })}>
               All workspaces
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={(e) => {
-                e.preventDefault();
-                setNewWsOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" /> New workspace
-            </DropdownMenuItem>
+            {userRole === "admin" && (
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setNewWsOpen(true);
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" /> New workspace
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -129,7 +135,7 @@ export function Sidebar() {
             to="/w/$workspaceId"
             params={{ workspaceId: currentWorkspaceId }}
             className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-              !currentProjectId && !isLabelsRoute && !isSettingsRoute
+              !currentProjectId && !isLabelsRoute && !isSettingsRoute && !isUsersRoute
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
                 : "hover:bg-sidebar-accent/60"
             }`}
@@ -149,18 +155,34 @@ export function Sidebar() {
             <Tag className="h-4 w-4 opacity-60" />
             Labels
           </Link>
-          <Link
-            to="/w/$workspaceId/settings"
-            params={{ workspaceId: currentWorkspaceId }}
-            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
-              isSettingsRoute
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "hover:bg-sidebar-accent/60"
-            }`}
-          >
-            <Settings className="h-4 w-4 opacity-60" />
-            Settings
-          </Link>
+          {canManageUsers && (
+            <Link
+              to="/w/$workspaceId/settings"
+              params={{ workspaceId: currentWorkspaceId }}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                isSettingsRoute
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "hover:bg-sidebar-accent/60"
+              }`}
+            >
+              <Settings className="h-4 w-4 opacity-60" />
+              Settings
+            </Link>
+          )}
+          {canManageUsers && (
+            <Link
+              to="/w/$workspaceId/users"
+              params={{ workspaceId: currentWorkspaceId }}
+              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                isUsersRoute
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "hover:bg-sidebar-accent/60"
+              }`}
+            >
+              <Users className="h-4 w-4 opacity-60" />
+              Users
+            </Link>
+          )}
         </nav>
       )}
 
@@ -170,7 +192,7 @@ export function Sidebar() {
         </span>
         <Dialog open={newProjOpen} onOpenChange={setNewProjOpen}>
           <DialogTrigger asChild>
-            <Button size="icon" variant="ghost" className="h-6 w-6">
+            <Button size="icon" variant="ghost" className="h-6 w-6" disabled={!canManageUsers}>
               <Plus className="h-4 w-4" />
             </Button>
           </DialogTrigger>

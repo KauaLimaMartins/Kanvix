@@ -33,6 +33,8 @@ func NewRouter(d Deps) *gin.Engine {
 
 	api := r.Group("/api")
 	{
+		api.GET("/auth/setup", authHandler.Setup)
+		api.POST("/auth/first-signup", authHandler.FirstSignup)
 		api.POST("/auth/login", authHandler.Login)
 		api.GET("/auth/me", authHandler.Me)
 		api.POST("/auth/logout", authmw.Required(), authHandler.Logout)
@@ -47,9 +49,9 @@ func NewRouter(d Deps) *gin.Engine {
 		projects := handlers.ProjectsHandler{Service: d.AppService}
 		columns := handlers.ColumnsHandler{Service: d.AppService}
 		tasks := handlers.TasksHandler{Service: d.AppService}
+		subtasks := handlers.SubtasksHandler{Service: d.AppService}
 		labels := handlers.LabelsHandler{Service: d.AppService}
 		users := handlers.UsersHandler{Service: d.AppService}
-		admin := handlers.AdminHandler{Service: d.AppService}
 		statsSearch := handlers.StatsSearchHandler{Service: d.AppService}
 
 		protected.GET("/workspaces", workspaces.List)
@@ -73,6 +75,9 @@ func NewRouter(d Deps) *gin.Engine {
 		protected.PATCH("/tasks/:taskId", tasks.Update)
 		protected.DELETE("/tasks/:taskId", tasks.Delete)
 		protected.POST("/tasks/:taskId/move", tasks.Move)
+		protected.GET("/tasks/:taskId/subtasks", subtasks.ListByTask)
+		protected.POST("/tasks/:taskId/subtasks", subtasks.Create)
+		protected.PATCH("/subtasks/:subtaskId", subtasks.SetDone)
 
 		protected.GET("/workspaces/:workspaceId/labels", labels.ListByWorkspace)
 		protected.POST("/workspaces/:workspaceId/labels", labels.Create)
@@ -82,9 +87,9 @@ func NewRouter(d Deps) *gin.Engine {
 		protected.GET("/workspaces/:workspaceId/stats", statsSearch.WorkspaceStats)
 		protected.GET("/workspaces/:workspaceId/search", statsSearch.Search)
 
-		protected.GET("/users", users.List)
-
-		protected.POST("/admin/reset", admin.ResetDemo)
+		protected.GET("/workspaces/:workspaceId/users", users.ListByWorkspace)
+		protected.POST("/workspaces/:workspaceId/users", users.CreateInWorkspace)
+		protected.PATCH("/workspaces/:workspaceId/users/:userId", users.UpdateRoleInWorkspace)
 	}
 
 	return r

@@ -7,16 +7,11 @@ import (
 	"strings"
 
 	"kanvix/backend/internal/http/dto"
-	"kanvix/backend/internal/repositories"
 )
 
 func (s AppService) WorkspaceStats(ctx context.Context, ownerID, workspaceID string) (dto.WorkspaceStats, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin", "member"); err != nil {
 		return dto.WorkspaceStats{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.WorkspaceStats{}, repositories.ErrForbidden
 	}
 
 	key := "stats:" + workspaceID
@@ -73,12 +68,8 @@ func (s AppService) WorkspaceStats(ctx context.Context, ownerID, workspaceID str
 }
 
 func (s AppService) Search(ctx context.Context, ownerID, workspaceID, q string, limit int) (dto.SearchResponse, error) {
-	ws, err := s.Repo.GetWorkspaceByID(ctx, workspaceID)
-	if err != nil {
+	if _, err := s.requireWorkspaceRole(ctx, ownerID, workspaceID, "admin", "member"); err != nil {
 		return dto.SearchResponse{}, err
-	}
-	if ws.OwnerID != ownerID {
-		return dto.SearchResponse{}, repositories.ErrForbidden
 	}
 
 	q = strings.TrimSpace(q)
