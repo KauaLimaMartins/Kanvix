@@ -75,6 +75,9 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
     .filter((c) => c.projectId === task.projectId)
     .sort((a, b) => a.order - b.order);
 
+  const currentAssignee = task.assigneeId ? users.find((u) => u.id === task.assigneeId) : null;
+  const assignableUsers = users.filter((u) => !u.disabled);
+
   const taskLabelObjs = (Array.isArray(task.labels) ? task.labels : [])
     .map((id) => allLabels.find((l) => l.id === id))
     .filter((l): l is NonNullable<typeof l> => Boolean(l));
@@ -137,7 +140,12 @@ export function TaskDrawer({ taskId, onClose }: { taskId: string | null; onClose
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unassigned</SelectItem>
-                  {users.map((u) => (
+                  {currentAssignee?.disabled && (
+                    <SelectItem value={currentAssignee.id} disabled>
+                      {currentAssignee.name} (disabled)
+                    </SelectItem>
+                  )}
+                  {assignableUsers.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.name}
                     </SelectItem>

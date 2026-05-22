@@ -212,10 +212,28 @@ export const api = {
           json: u,
         },
       ),
+    updateInWorkspace: (
+      workspaceId: string,
+      userId: string,
+      patch: Partial<Pick<User, "name" | "role">>,
+    ) =>
+      request<{ ok: true }>(`/workspaces/${workspaceId}/users/${userId}`, {
+        method: "PATCH",
+        json: patch,
+      }),
     updateRoleInWorkspace: (workspaceId: string, userId: string, role: string) =>
       request<{ ok: true }>(`/workspaces/${workspaceId}/users/${userId}`, {
         method: "PATCH",
         json: { role },
+      }),
+    deleteFromWorkspace: (
+      workspaceId: string,
+      userId: string,
+      req: { action: "unassign" | "reassign" | "disable"; reassignToUserId?: string },
+    ) =>
+      request<{ ok: true }>(`/workspaces/${workspaceId}/users/${userId}`, {
+        method: "DELETE",
+        json: req,
       }),
   },
 };

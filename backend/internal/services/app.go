@@ -13,7 +13,7 @@ import (
 )
 
 type Bootstrap struct {
-	User       dto.MeUser    `json:"user"`
+	User       dto.MeUser      `json:"user"`
 	Workspaces []dto.Workspace `json:"workspaces"`
 	Projects   []dto.Project   `json:"projects"`
 	Columns    []dto.Column    `json:"columns"`
@@ -114,7 +114,7 @@ func (s AppService) Bootstrap(ctx context.Context, owner models.User) (Bootstrap
 	}
 
 	for _, u := range users {
-		out.Users = append(out.Users, dto.User{ID: u.ID, Name: u.Name, AvatarColor: u.AvatarColor})
+		out.Users = append(out.Users, dto.User{ID: u.ID, Name: u.Name, AvatarColor: u.AvatarColor, Disabled: u.Disabled})
 	}
 
 	for _, w := range workspaces {

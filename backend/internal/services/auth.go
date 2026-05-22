@@ -115,6 +115,9 @@ func (s AuthService) Login(ctx context.Context, email string, password string) (
 	if err != nil {
 		return models.User{}, "", err
 	}
+	if u.Disabled {
+		return models.User{}, "", repositories.ErrForbidden
+	}
 	if u.PasswordHash == "" {
 		return models.User{}, "", repositories.ErrForbidden
 	}
@@ -161,6 +164,9 @@ func (s AuthService) Me(ctx context.Context, token string) (models.User, error) 
 	u, err := s.Repo.GetUserByID(ctx, userID)
 	if err != nil {
 		return models.User{}, err
+	}
+	if u.Disabled {
+		return models.User{}, repositories.ErrForbidden
 	}
 	return u, nil
 }

@@ -74,3 +74,59 @@ func (h UsersHandler) UpdateRoleInWorkspace(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
+
+type patchWorkspaceUserRequest struct {
+	Name *string `json:"name"`
+	Role *string `json:"role"`
+}
+
+func (h UsersHandler) PatchInWorkspace(c *gin.Context) {
+	userID, ok := requireUserID(c)
+	if !ok {
+		return
+	}
+	workspaceID := c.Param("workspaceId")
+	targetUserID := c.Param("userId")
+	var req patchWorkspaceUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil || (req.Name == nil && req.Role == nil) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := h.Service.UpdateWorkspaceUser(c.Request.Context(), userID, workspaceID, targetUserID, req.Name, req.Role); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+type deleteWorkspaceUserRequest struct {
+	Action           string  `json:"action"`
+	ReassignToUserID *string `json:"reassignToUserId"`
+}
+
+func (h UsersHandler) DeleteFromWorkspace(c *gin.Context) {
+	userID, ok := requireUserID(c)
+	if !ok {
+		return
+	}
+	workspaceID := c.Param("workspaceId")
+	targetUserID := c.Param("userId")
+
+	var req deleteWorkspaceUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+	if err := h.Service.DeleteWorkspaceUser(
+		c.Request.Context(),
+		userID,
+		workspaceID,
+		targetUserID,
+		services.DeleteWorkspaceUserAction(req.Action),
+		req.ReassignToUserID,
+	); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}

@@ -90,7 +90,8 @@ func NewRouter(d Deps) *gin.Engine {
 
 		protected.GET("/workspaces/:workspaceId/users", users.ListByWorkspace)
 		protected.POST("/workspaces/:workspaceId/users", users.CreateInWorkspace)
-		protected.PATCH("/workspaces/:workspaceId/users/:userId", users.UpdateRoleInWorkspace)
+		protected.PATCH("/workspaces/:workspaceId/users/:userId", users.PatchInWorkspace)
+		protected.DELETE("/workspaces/:workspaceId/users/:userId", users.DeleteFromWorkspace)
 	}
 
 	return r

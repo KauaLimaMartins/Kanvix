@@ -4,6 +4,7 @@ type User struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatarColor"`
+	Disabled    bool   `json:"disabled"`
 }
 
 type UserDetail struct {
@@ -12,6 +13,7 @@ type UserDetail struct {
 	Name        string `json:"name"`
 	AvatarColor string `json:"avatarColor"`
 	Role        string `json:"role"`
+	Disabled    bool   `json:"disabled"`
 }
 
 type MeUser struct {

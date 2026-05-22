@@ -4,6 +4,7 @@ export interface User {
   id: ID;
   name: string;
   avatarColor: string;
+  disabled?: boolean;
   email?: string;
   role?: "admin" | "member";
 }

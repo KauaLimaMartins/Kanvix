@@ -8,6 +8,7 @@ type User struct {
 	Name         string    `gorm:"not null" json:"name"`
 	AvatarColor  string    `gorm:"not null" json:"avatarColor"`
 	Role         string    `gorm:"not null;default:'member'" json:"role"`
+	Disabled     bool      `gorm:"not null;default:false" json:"disabled"`
 	PasswordHash string    `gorm:"not null;default:''" json:"-"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`

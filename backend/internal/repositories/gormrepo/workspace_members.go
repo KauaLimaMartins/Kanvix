@@ -50,3 +50,13 @@ func (r Repo) ListWorkspacesForUser(ctx context.Context, userID string) ([]model
 	return ws, nil
 }
 
+func (r Repo) DeleteWorkspaceMember(ctx context.Context, workspaceID, userID string) error {
+	res := r.DB.WithContext(ctx).Delete(&models.WorkspaceMember{}, "workspace_id = ? AND user_id = ?", workspaceID, userID)
+	if res.Error != nil {
+		return fmt.Errorf("delete workspace member: %w", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return repositories.ErrNotFound
+	}
+	return nil
+}
