@@ -1,12 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-
-import { api } from "@/services/api";
-import { useAppStore } from "@/store/useAppStore";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,6 +8,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ApiError, api } from "@/services/api";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +17,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Pencil, Trash2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -32,12 +26,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Pencil, Trash2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { createFileRoute } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { useAppStore } from "@/store/useAppStore";
+import { useState } from "react";
 
 export const Route = createFileRoute("/w/$workspaceId/users")({
   component: UsersPage,
 });
+
+function errorMessage(e: unknown, fallback: string) {
+  if (e instanceof ApiError) return e.message;
+  if (e instanceof Error) return e.message;
+  return fallback;
+}
 
 function UsersPage() {
   const { workspaceId } = Route.useParams();
@@ -60,6 +67,7 @@ function UsersPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
+  const [isCreating, setIsCreating] = useState(false);
   const [lastCreatedUserId, setLastCreatedUserId] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
@@ -150,6 +158,7 @@ function UsersPage() {
             <DialogFooter>
               <Button
                 variant="ghost"
+                disabled={isCreating}
                 onClick={() => {
                   setOpen(false);
                 }}
@@ -157,24 +166,41 @@ function UsersPage() {
                 Cancel
               </Button>
               <Button
+                disabled={isCreating}
                 onClick={() => {
-                  if (!email.trim() || !name.trim() || !password) return;
+                  const nextEmail = email.trim();
+                  const nextName = name.trim();
+                  if (!nextEmail || !nextName || !password) {
+                    toast.error("Name, email, and password are required.");
+                    return;
+                  }
+                  if (password.length < 8) {
+                    toast.error("Password must be at least 8 characters.");
+                    return;
+                  }
                   void (async () => {
-                    const res = await api.users.createInWorkspace(workspaceId, {
-                      email: email.trim(),
-                      name: name.trim(),
-                      password,
-                      role,
-                    });
-                    setLastCreatedUserId(res.user.id);
-                    setTimeout(() => setLastCreatedUserId(null), 900);
-                    setName("");
-                    setEmail("");
-                    setPassword("");
-                    setRole("member");
-                    setOpen(false);
-                    await qc.invalidateQueries({ queryKey: ["workspaceUsers", workspaceId] });
-                    await qc.invalidateQueries({ queryKey: ["bootstrap"] });
+                    setIsCreating(true);
+                    try {
+                      const res = await api.users.createInWorkspace(workspaceId, {
+                        email: nextEmail,
+                        name: nextName,
+                        password,
+                        role,
+                      });
+                      setLastCreatedUserId(res.user.id);
+                      setTimeout(() => setLastCreatedUserId(null), 900);
+                      setName("");
+                      setEmail("");
+                      setPassword("");
+                      setRole("member");
+                      setOpen(false);
+                      await qc.invalidateQueries({ queryKey: ["workspaceUsers", workspaceId] });
+                      await qc.invalidateQueries({ queryKey: ["bootstrap"] });
+                    } catch (e) {
+                      toast.error(errorMessage(e, "Could not create user."));
+                    } finally {
+                      setIsCreating(false);
+                    }
                   })();
                 }}
               >
